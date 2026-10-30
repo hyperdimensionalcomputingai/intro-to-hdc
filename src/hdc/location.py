@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Mapping
 
 import torch
 import torchhd
 
 from hdc.core import TorchHDEncoder
-
 
 DEFAULT_SEMANTIC_WEIGHT = 8
 
@@ -47,9 +46,7 @@ class LocationNodeEncoder:
         if semantic_hv.dtype != torch.float32:
             raise TypeError("Location semantic hypervector must use float32")
         if not torch.all((semantic_hv == -1.0) | (semantic_hv == 1.0)):
-            raise ValueError(
-                "Location semantic hypervector must be bipolar {-1, +1}"
-            )
+            raise ValueError("Location semantic hypervector must be bipolar {-1, +1}")
 
         structural_hv = self.encoder.encode_properties(properties)
         return structural_hv + self.semantic_weight * semantic_hv

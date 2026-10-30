@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Mapping, TypedDict
+from typing import TypedDict
 
 import lance
 import polars as pl
@@ -53,8 +54,7 @@ class EncodedTable:
             DIMENSIONS,
         ):
             raise ValueError(
-                f"Invalid hv tensor shape {tuple(self.hvs.shape)} for "
-                f"{len(self.ids)} rows"
+                f"Invalid hv tensor shape {tuple(self.hvs.shape)} for {len(self.ids)} rows"
             )
         if self.hvs.dtype != torch.float32:
             raise TypeError("hv must remain float32 until Arrow storage")
@@ -113,10 +113,7 @@ def build_location_documents(
             rows,
             key=lambda row: (-float(row["weight"]), row["feature"], row["evidence"]),
         )
-        clauses = [
-            f"{row['feature'].replace('_', ' ')}: {row['evidence']}"
-            for row in ordered
-        ]
+        clauses = [f"{row['feature'].replace('_', ' ')}: {row['evidence']}" for row in ordered]
         documents[location_id] = "; ".join(clauses)
     return documents
 
@@ -134,9 +131,7 @@ def read_table(db_uri: Path, table_name: str) -> pl.DataFrame:
     keeps repeat encoding proportional to the source graph properties.
     """
     ds = lance.dataset(dataset_path(db_uri, table_name))
-    columns = [
-        name for name in ds.schema.names if name not in NON_SYMBOLIC_COLUMNS
-    ]
+    columns = [name for name in ds.schema.names if name not in NON_SYMBOLIC_COLUMNS]
     return pl.from_arrow(ds.to_table(columns=columns))
 
 
@@ -229,7 +224,7 @@ def hv_merge_table(
     ids: list[str],
     hvs: torch.Tensor,
     *,
-    id_type: pa.DataType = pa.large_string(),
+    id_type: pa.DataType | None = None,
 ) -> pa.Table:
     """Build the `id` + hypervector Arrow table Lance grafts onto a graph table.
 
@@ -239,9 +234,7 @@ def hv_merge_table(
     only at this final storage boundary.
     """
     if hvs.shape != (len(ids), DIMENSIONS):
-        raise ValueError(
-            f"Invalid hv tensor shape {tuple(hvs.shape)} for {len(ids)} rows"
-        )
+        raise ValueError(f"Invalid hv tensor shape {tuple(hvs.shape)} for {len(ids)} rows")
     flat = (
         hvs.detach()
         .to(dtype=torch.float32, device="cpu")
@@ -254,7 +247,7 @@ def hv_merge_table(
         DIMENSIONS,
     )
     return pa.Table.from_arrays(
-        [pa.array(ids, type=id_type), hv_array],
+        [pa.array(ids, type=pa.large_string() if id_type is None else id_type), hv_array],
         names=["id", "hv"],
     )
 
@@ -278,9 +271,7 @@ def load_or_create_projector(
     if metadata_path.exists():
         metadata = SemanticHDCMetadata.read(metadata_path)
         if projection_seed != metadata.projection_seed:
-            raise ValueError(
-                "Projection seed changed; rebuild the semantic HDC artifacts"
-            )
+            raise ValueError("Projection seed changed; rebuild the semantic HDC artifacts")
         metadata.validate_runtime(
             model=embedder.canonical_model,
             model_digest=model_digest,
@@ -340,9 +331,7 @@ def encode_hdc(
     location_ids = sorted(documents)
     embedder = OllamaEmbedder(model=embedding_model, host=ollama_host)
     model_digest = embedder.model_digest()
-    embeddings = embedder.embed_documents(
-        [documents[location_id] for location_id in location_ids]
-    )
+    embeddings = embedder.embed_documents([documents[location_id] for location_id in location_ids])
     projector, metadata = load_or_create_projector(
         db_uri,
         embeddings,

@@ -7,11 +7,8 @@ from pathlib import Path
 from graph.paths import PROJECT_ROOT
 from hdc.retrieve import hdc_fuzzy_paths
 
-
 DEFAULT_QUERY_SET = PROJECT_ROOT / "data" / "evaluation" / "semantic_queries.csv"
-DEFAULT_PATH_QUERY_SET = (
-    PROJECT_ROOT / "data" / "evaluation" / "semantic_path_queries.csv"
-)
+DEFAULT_PATH_QUERY_SET = PROJECT_ROOT / "data" / "evaluation" / "semantic_path_queries.csv"
 
 
 @dataclass(frozen=True)
@@ -38,9 +35,7 @@ class EvaluationResult:
     def visitor_set_matches(self) -> bool:
         if not self.expected_people:
             return True
-        return set(self.people_by_city.get(self.expected_city, ())) == set(
-            self.expected_people
-        )
+        return set(self.people_by_city.get(self.expected_city, ())) == set(self.expected_people)
 
     @property
     def passes(self) -> bool:
@@ -50,9 +45,7 @@ class EvaluationResult:
 def load_queries(path: Path) -> list[dict[str, str]]:
     with path.open(newline="") as source:
         rows = list(csv.DictReader(source))
-    if not rows or any(
-        not row.get("query") or not row.get("expected_city") for row in rows
-    ):
+    if not rows or any(not row.get("query") or not row.get("expected_city") for row in rows):
         raise ValueError(f"Evaluation query set is empty or malformed: {path}")
     return rows
 
@@ -74,10 +67,7 @@ def people_by_city(
     grouped: dict[str, set[str]] = {}
     for path in paths:
         grouped.setdefault(str(path["city"]), set()).add(str(path["person"]))
-    return {
-        city: tuple(sorted(people))
-        for city, people in grouped.items()
-    }
+    return {city: tuple(sorted(people)) for city, people in grouped.items()}
 
 
 def evaluate(
@@ -91,9 +81,7 @@ def evaluate(
     results = []
     for row in load_queries(query_path):
         if require_expected_people and not row.get("expected_people"):
-            raise ValueError(
-                f"Path query has no expected people: {row['query']!r}"
-            )
+            raise ValueError(f"Path query has no expected people: {row['query']!r}")
         paths = hdc_fuzzy_paths(
             row["query"],
             db_uri,

@@ -103,9 +103,7 @@ def validate_location_evidence(
         .to_list()
     )
     bad_weights = (
-        evidence.with_columns(
-            pl.col("weight").cast(pl.Float64, strict=False).alias("_weight")
-        )
+        evidence.with_columns(pl.col("weight").cast(pl.Float64, strict=False).alias("_weight"))
         .filter(pl.col("_weight").is_null() | (pl.col("_weight") < 0) | (pl.col("_weight") > 1))
         .select("location_id", "feature", "weight")
         .to_dicts()

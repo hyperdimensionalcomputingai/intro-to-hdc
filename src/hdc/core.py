@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Mapping, Sequence
 
 import torch
 import torchhd
-
 
 DIMENSIONS = 10_000
 SEED = 13
@@ -68,13 +67,9 @@ class TorchHDEncoder:
     def encode_properties(self, properties: Mapping[str, str]) -> torchhd.MAPTensor:
         """Encode a record as a raw sum of bound key/value associations."""
         sorted_items = sorted(
-            (key, value)
-            for key, value in properties.items()
-            if key not in NON_SYMBOLIC_COLUMNS
+            (key, value) for key, value in properties.items() if key not in NON_SYMBOLIC_COLUMNS
         )
-        return self.bundle(
-            [self.association_hv(key, value) for key, value in sorted_items]
-        )
+        return self.bundle([self.association_hv(key, value) for key, value in sorted_items])
 
     def bundle(self, hypervectors: Sequence[torchhd.MAPTensor]) -> torchhd.MAPTensor:
         """Bundle hypervectors as a full-precision, exactly updateable sum."""
@@ -150,6 +145,4 @@ class TorchHDEncoder:
         # node-table sum. At this boundary the composite subject/object must be
         # bipolar so multiplying by the known factors recovers the remaining
         # factor exactly. Stable row identities supply the tie-break contexts.
-        return torchhd.multibind(
-            torch.stack([subject_factor, predicate_hv, object_factor])
-        )
+        return torchhd.multibind(torch.stack([subject_factor, predicate_hv, object_factor]))

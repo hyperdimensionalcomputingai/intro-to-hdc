@@ -25,8 +25,7 @@ def blob_encoded(data: pl.DataFrame) -> pa.Table:
 
     Marking a binary column with `lance-encoding:blob` keeps its bytes out of
     normal scans: the value materializes only via `take_blobs`, so a query that
-    never asks for the image never pays to read it. See the on-demand image
-    endpoint in graph_api.py.
+    never asks for the image never pays to read it. Scripts can read an image explicitly with `take_blobs`.
     """
     table = data.to_arrow()
     fields = [
