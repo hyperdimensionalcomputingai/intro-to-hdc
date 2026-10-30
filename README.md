@@ -1,4 +1,4 @@
-# Multimodal Knowledge Graphs with HDC + lance-csr
+# An introduction to HDC with LanceDB and lance-csr
 
 A small, self-contained demo that combines two ways of looking at the same data: hyperdimensional space (10K dimensions) and property graphs. [LanceDB](https://lancedb.com) is used as the storage, providing two forms of retrieval over the data:
 
@@ -23,6 +23,15 @@ continuous and fuzzy.
 > [data/features/location_vibes.csv](data/features/location_vibes.csv) are hand-authored
 > stand-ins shaped exactly like the captions a vision model (CLIP / a vision-LLM) would emit. The
 > semantic regression set is likewise a small demo sanity check, not a general retrieval benchmark.
+
+## Scope
+
+This repository is a script-based introduction to HDC, LanceDB storage, and lance-csr
+queries. It contains the Python implementation, a small dataset, runnable examples,
+and regression tests. There is no web server or frontend to start.
+
+We plan to provide a new open-source Tauri frontend soon in a separate repository.
+Keeping that UI separate lets this introduction focus on the data flow and HDC operations.
 
 ## What is HDC?
 
@@ -115,7 +124,7 @@ Here is every column of every table:
 | `lon_bucket` | string | Coarse longitude bucket |
 | `description` | string | Free-text city description |
 | `image_path` | string | Human-readable pointer to the skyline photo |
-| `image` | **binary (blob)** | **Raw JPEG bytes of the skyline photo, stored natively as a lazy blob** |
+| `image` | **Lance blob extension** | **Raw JPEG bytes of the skyline photo, stored natively as a lazy blob** |
 | `hv` | vector[10000] | Full location hypervector: structural property sum plus weighted semantic evidence |
 
 **`VISITED`**
@@ -152,11 +161,10 @@ be tuned for other schemas.
 each), not a link to them. Graph facts, the image asset, and the hypervectors are columns of one
 LanceDB row: indexed and versioned together, with nothing to keep in sync across systems.
 
-The column is written with Lance's blob encoding (`lance-encoding:blob`), so the bytes are **lazy**:
-ordinary scans and Cypher queries return a small `{position, size}` descriptor, never the image
-itself. The bytes are read only when something explicitly asks for them via `take_blobs` (see the
-`/image/{label}/{id}` endpoint in [src/graph/api.py](src/graph/api.py)). A query that never wants a
-picture never pays to read one, which is what makes storing large assets inline practical.
+The column uses Lance's blob encoding (`lance-encoding:blob`). Encoding and retrieval
+project only the columns they need, leaving images out. A script can explicitly read
+one image with `take_blobs`; see the storage example below. In the current Lance version,
+the image column has a blob extension type rather than an ordinary binary Arrow type.
 
 At query time ([src/hdc/retrieve.py](src/hdc/retrieve.py)), the raw natural-language query goes through the same embedding
 model and projection as the stored location documents. The resulting query hypervector ranks
@@ -287,8 +295,7 @@ uv sync
 ```
 
 Direct dependencies include the official `ollama` Python client, `lancedb`, `lance-csr`,
-`polars`, `pyarrow`, `numpy`, `torch`, `torch-hd`, plus `fastapi` / `uvicorn` for the visualizer
-backend. The client talks to the local Ollama server, so the demo adds no hosted embedding service
+`polars`, `pyarrow`, `pylance`, `numpy`, `torch`, and `torch-hd`. The client talks to the local Ollama server, so the demo adds no hosted embedding service
 or API key.
 
 You can install additional dependencies as needed using the `uv add` command.
@@ -299,7 +306,7 @@ The Python implementation is organized by responsibility:
 
 ```text
 src/
-├── graph/        # source data, Lance ingestion, Cypher traversal, visualizer API
+├── graph/        # source data, Lance ingestion, Cypher traversal
 ├── hdc/          # MAP algebra, semantic projection, full-node encoding, retrieval
 ├── evaluation/   # semantic ranking and VISITED path regression logic
 └── *.py          # thin executable entry points
@@ -513,38 +520,65 @@ These are scores read from the persisted float16 `Location.hv` column, not from 
 semantic component. Margins remain useful diagnostics, but top-1 accuracy on nine regression
 queries should not be mistaken for calibrated confidence or a general benchmark.
 
-## Visualizing the graph
+## Explore the pieces in Python
 
-A two-view React + FastAPI visualizer lives in [viz/](viz/):
+Run these examples from the repository root. The first needs only `uv sync`; the second
+needs the tables created by `uv run python src/graph_ingest.py`.
 
-- **Schema view**: the meta-graph (labels, properties, relationships) derived from the graph config
-  and each table's Arrow schema. The hypervector column (`hv`) and blob asset (`image`) are badged,
-  never drawn.
-- **Instance view**: a query *builder*. Pick a relationship, per-label display/tooltip columns, and
-  structured filters. The backend constructs Cypher from your selections and returns a node-link
-  graph; the generated Cypher is shown read-only. Click a `Location` node and its skyline image is
-  fetched on demand from the lazy blob column (nothing else loads image bytes).
+### Bind a role to a value, then bundle properties
 
-The Cypher engine (`lance_csr.CypherEngine`) is Python-only, so the browser never touches it: a
-FastAPI backend serves JSON and the React frontend draws it.
-
-Run the two processes (build the dataset first if you haven't):
+For MAP hypervectors, binding $h_{\mathrm{role}} \otimes h_{\mathrm{value}}$ is
+element-wise multiplication. Bundling $h_{\mathrm{name}} \oplus h_{\mathrm{timezone}}$
+is implemented here as an arithmetic sum, kept unnormalized so an ingredient can be
+subtracted again. These are structural symbols, not text embeddings.
 
 ```bash
-# 1. Backend (port 8000): uses build_engine() from src/graph/retrieve.py
-uv run uvicorn graph_api:app --app-dir src --reload
+PYTHONPATH=src uv run python - <<'PYTHON'
+import torch
+import torchhd
+from hdc.core import TorchHDEncoder
 
-# 2. Frontend (must be port 5173; the backend CORS allowlist pins it)
-cd viz && npm install && npm run dev
+encoder = TorchHDEncoder()
+h_role = encoder.token_hv("key:name")
+h_value = encoder.token_hv("value:Seattle")
+h_name = torchhd.bind(h_role, h_value)
+h_timezone = encoder.association_hv("timezone", "pacific")
+h_record = encoder.bundle([h_name, h_timezone])
+
+# Bipolar binding is self-inverse; raw bundling retains the exact sum.
+assert torch.equal(torchhd.bind(h_name, h_role), h_value)
+assert torch.equal(h_record - h_timezone, h_name)
+assert h_record.dtype == torch.float32
+print("Binding and raw-bundle recovery checks passed.")
+PYTHON
 ```
 
-Then open **http://localhost:5173**. The preview will showcase a property graph visualization as follows:
+A composite record is normalized to bipolar values only before binding it into a
+relationship. Stored hypervectors use float16 to reduce space; cast them back to float32
+before TorchHD operations.
 
-![](./img/graph-preview.png)
+### Read selected columns and load one image
 
-To point the whole stack at a different dataset, edit `GRAPH_SCHEMA` in
-[src/graph/retrieve.py](src/graph/retrieve.py): both the engine and the visualizer follow it.
-See [viz/README.md](viz/README.md) for the API contract.
+```bash
+uv run python - <<'PYTHON'
+import lance
+
+locations = lance.dataset("person-location/Location.lance")
+rows = locations.to_table(columns=["id", "name", "timezone"])
+print(rows.to_pydict())
+
+# The scan above excludes image bytes and hypervectors.
+index = rows.column("id").to_pylist().index("location-seattle")
+with locations.take_blobs("image", indices=[index])[0] as blob:
+    image_bytes = blob.readall()
+print(f"Explicitly loaded Seattle's image: {len(image_bytes)} bytes")
+PYTHON
+```
+
+For graph traversal, `src/graph_retrieve.py` runs exact Cypher over those same tables.
+For semantic retrieval, `src/hdc_retrieve.py` ranks location hypervectors in LanceDB
+and expands the selected cities through lance-csr. `--limit` counts candidate cities,
+so one selected city can return several people through its `VISITED` edges.
 
 ## Cost caveats
 

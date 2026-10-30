@@ -9,10 +9,7 @@ from lance_csr import CypherEngine, GraphConfig
 
 from graph.paths import DEFAULT_DB_URI
 
-# Single source of truth for the graph's shape. The CypherEngine's GraphConfig is
-# built from this, and the visualizer API (graph_api.py) reads it directly — so the
-# schema view, query builder, and engine never drift. Swap this spec to point the
-# whole stack at a different lance-csr dataset.
+# Map the persisted node identifiers and edge endpoints to Cypher labels.
 GRAPH_SCHEMA = {
     "nodes": [
         {"label": "Person", "id": "id"},
