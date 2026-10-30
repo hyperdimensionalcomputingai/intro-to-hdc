@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import argparse
-from pathlib import Path
-
 from evaluation.semantic import (
     DEFAULT_PATH_QUERY_SET,
     DEFAULT_QUERY_SET,
@@ -11,22 +8,7 @@ from evaluation.semantic import (
 )
 from graph.paths import DEFAULT_DB_URI, DEFAULT_OLLAMA_HOST
 
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Evaluate semantic HDC ranking and graph-path retrieval."
-    )
-    parser.add_argument("--queries", type=Path, default=DEFAULT_QUERY_SET)
-    parser.add_argument(
-        "--path-queries",
-        type=Path,
-        default=DEFAULT_PATH_QUERY_SET,
-        help="Semantic queries that also assert exact VISITED traversal results.",
-    )
-    parser.add_argument("--db-uri", type=Path, default=DEFAULT_DB_URI)
-    parser.add_argument("--ollama-host", default=DEFAULT_OLLAMA_HOST)
-    parser.add_argument("--limit", type=int, default=3)
-    return parser.parse_args()
+LOCATION_LIMIT = 3  # Evaluate all three cities in this tiny corpus.
 
 
 def print_results(title: str, results: list[EvaluationResult]) -> None:
@@ -46,18 +28,17 @@ def print_results(title: str, results: list[EvaluationResult]) -> None:
 
 
 def main() -> int:
-    args = parse_args()
     semantic_results = evaluate(
-        args.queries,
-        args.db_uri,
-        args.ollama_host,
-        args.limit,
+        DEFAULT_QUERY_SET,
+        DEFAULT_DB_URI,
+        DEFAULT_OLLAMA_HOST,
+        LOCATION_LIMIT,
     )
     path_results = evaluate(
-        args.path_queries,
-        args.db_uri,
-        args.ollama_host,
-        args.limit,
+        DEFAULT_PATH_QUERY_SET,
+        DEFAULT_DB_URI,
+        DEFAULT_OLLAMA_HOST,
+        LOCATION_LIMIT,
         require_expected_people=True,
     )
     print_results("Semantic city ranking", semantic_results)

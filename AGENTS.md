@@ -2,7 +2,7 @@
 
 - This is a Python 3.13 `uv` project. Run tests with
   `uv run pytest` and the end-to-end demo
-  with `uv run python src/run_person_location_demo.py`.
+  with `uv run src/run_person_location_demo.py`.
 - Root-level files in `src/` are executable entry points. Implementation code lives
   under `src/graph/`, `src/hdc/`, and `src/evaluation/`.
 - `src/graph/ingest.py` creates the `Person`, `Location`, and `VISITED` Lance tables;
