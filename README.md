@@ -6,7 +6,7 @@ then follow exact `VISITED` edges to find who visited them.
 
 - **TorchHD** builds and combines 10,000-dimensional hypervectors.
 - **LanceDB** stores graph records, hypervectors, and skyline images together.
-- **lance-csr** runs Cypher queries over those same Lance tables.
+- **[lance-csr](https://github.com/hyperdimensionalcomputingai/lance-csr)** runs Cypher queries over those same Lance tables.
 - **Ollama** supplies local text embeddings for semantic matching.
 
 The scripts are meant to be read and edited. Change a query or setting near the top of a
@@ -19,7 +19,7 @@ Install Python 3.13+, [uv](https://docs.astral.sh/uv/), and [Ollama](https://oll
 From the repository root:
 
 ```bash
-uv sync
+uv sync --locked
 ```
 
 For the semantic examples, start Ollama and download the embedding model:
