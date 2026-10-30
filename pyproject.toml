@@ -5,24 +5,29 @@ description = "Semantic hyperdimensional retrieval over a LanceDB property graph
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi>=0.136.3",
-    "lance-graph>=0.5.4",
-    "lancedb>=0.34.0",
-    "numpy>=2.3.0",
-    "ollama>=0.6.2",
-    "polars>=1.41.2",
-    "pyarrow>=24.0.0",
-    "pylance>=8.0.0",
-    "torch>=2.9.0",
-    "torch-hd>=5.8.3",
-    "uvicorn[standard]>=0.49.0",
+    "fastapi>=0.162.0",
+    "lance-csr>=0.4.0",
+    # lance-csr 0.4 requires pylance 13; its namespace dependency excludes LanceDB 0.41.
+    "lancedb>=0.40.0,<0.41",
+    "numpy>=2.5.4",
+    "ollama>=0.6.3",
+    "polars>=2.1.0",
+    "pyarrow>=26.0.0",
+    "pylance>=13.0.0,<14",
+    "torch>=2.15.0",
+    "torch-hd>=5.8.4",
+    "uvicorn[standard]>=0.54.0",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest>=9.1.1",
+    "ruff>=0.17.3",
+    "pytest>=9.2.0",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100

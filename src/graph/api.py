@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import mimetypes
+from itertools import pairwise
 from pathlib import Path
 
 import lance
 import pyarrow as pa
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
+from lance.blob import BlobType
 from pydantic import BaseModel, Field
 
 from graph.paths import DEFAULT_DB_URI
@@ -19,7 +21,7 @@ from graph.retrieve import GRAPH_SCHEMA, build_engine
 # every property name against the schema) is the whole injection surface.
 ALLOWED_OPS = {"=", "<>", "<", "<=", ">", ">=", "CONTAINS", "STARTS WITH", "ENDS WITH"}
 
-app = FastAPI(title="lance-graph visualizer API")
+app = FastAPI(title="lance-csr visualizer API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -47,7 +49,11 @@ def _is_blob(field_type: pa.DataType) -> bool:
     Like embeddings, blobs are never projectable or filterable: returning raw
     bytes would blow up the JSON node-link response.
     """
-    return pa.types.is_binary(field_type) or pa.types.is_large_binary(field_type)
+    return (
+        isinstance(field_type, BlobType)
+        or pa.types.is_binary(field_type)
+        or pa.types.is_large_binary(field_type)
+    )
 
 
 def _node_label(label: str) -> dict | None:
@@ -124,15 +130,11 @@ def _quote(value: str) -> str:
 def _plan(spec: QuerySpec) -> tuple[str, list[tuple[str, str]]]:
     """Resolve the spec into (MATCH pattern, [(var, label), ...] for each node)."""
     if spec.edge:
-        rel = next(
-            (r for r in GRAPH_SCHEMA["relationships"] if r["type"] == spec.edge), None
-        )
+        rel = next((r for r in GRAPH_SCHEMA["relationships"] if r["type"] == spec.edge), None)
         if rel is None:
             raise HTTPException(400, f"Unknown relationship type: {spec.edge}")
         vars_labels = [("a", rel["from_label"]), ("b", rel["to_label"])]
-        pattern = (
-            f"MATCH (a:{rel['from_label']})-[:{spec.edge}]->(b:{rel['to_label']})"
-        )
+        pattern = f"MATCH (a:{rel['from_label']})-[:{spec.edge}]->(b:{rel['to_label']})"
         return pattern, vars_labels
     if spec.node:
         if _node_label(spec.node) is None:
@@ -154,9 +156,7 @@ def assemble(spec: QuerySpec, db_uri: Path = DEFAULT_DB_URI) -> dict:
         id_field[label] = node["id"]
         dataset = _dataset(label, db_uri)
         scalar_props[label] = {
-            f.name
-            for f in dataset.schema
-            if not _is_vector(f.type) and not _is_blob(f.type)
+            f.name for f in dataset.schema if not _is_vector(f.type) and not _is_blob(f.type)
         }
 
     # Projection: only id + chosen label + tooltip columns. Embeddings can never enter.
@@ -201,9 +201,7 @@ def assemble(spec: QuerySpec, db_uri: Path = DEFAULT_DB_URI) -> dict:
             seen.add(node_id)
             render = spec.render.get(label)
             display = row.get(f"{var}.{render.label}") if render else raw_id
-            tooltip = (
-                {p: row.get(f"{var}.{p}") for p in render.tooltip} if render else {}
-            )
+            tooltip = {p: row.get(f"{var}.{p}") for p in render.tooltip} if render else {}
             nodes.append(
                 {
                     "id": node_id,
@@ -213,7 +211,7 @@ def assemble(spec: QuerySpec, db_uri: Path = DEFAULT_DB_URI) -> dict:
                 }
             )
         # Pattern adjacency → edges (single hop today; generalizes to chains).
-        for source, target in zip(row_ids, row_ids[1:]):
+        for source, target in pairwise(row_ids):
             links.append({"source": source, "target": target, "type": spec.edge})
 
     return {"nodes": nodes, "links": links, "cypher": cypher}

@@ -3,10 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ollama import EmbedResponse
 import pytest
 import torch
 import torch.nn.functional as F
+from ollama import EmbedResponse
 
 from hdc.semantic import (
     OllamaEmbedder,

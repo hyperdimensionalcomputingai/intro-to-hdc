@@ -54,9 +54,7 @@ def test_tie_breaking_is_bipolar_and_context_deterministic(
 def test_composite_nodes_unbind_exactly_from_triple(
     encoder: TorchHDEncoder,
 ) -> None:
-    subject = encoder.encode_properties(
-        {"name": "Seattle", "role": "designer"}
-    )
+    subject = encoder.encode_properties({"name": "Seattle", "role": "designer"})
     object_hv = encoder.bundle(
         [
             encoder.association_hv("feature", "mountains"),
@@ -72,9 +70,7 @@ def test_composite_nodes_unbind_exactly_from_triple(
         object_context="Location:test",
     )
     subject_factor = encoder.normalize_for_binding(subject, "Person:test")
-    recovered_object = torchhd.multibind(
-        torch.stack([triple, subject_factor, predicate])
-    )
+    recovered_object = torchhd.multibind(torch.stack([triple, subject_factor, predicate]))
     expected_object = encoder.normalize_for_binding(
         object_hv,
         "Location:test",

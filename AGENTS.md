@@ -7,7 +7,7 @@
   under `src/graph/`, `src/hdc/`, and `src/evaluation/`.
 - `src/graph/ingest.py` creates the `Person`, `Location`, and `VISITED` Lance tables;
   `src/hdc/encode.py` adds HDC columns to those same tables. Fuzzy retrieval searches
-  the weighted full-node `Location.hv`, then lance-graph/Cypher expands candidates through exact
+  the weighted full-node `Location.hv`, then lance-csr/Cypher expands candidates through exact
   `VISITED` edges.
 - HDC uses deterministic 10,000-dimensional TorchHD MAP hypervectors. Preserve
   raw bundle sums; normalize composite hypervectors to bipolar `{-1, +1}` only

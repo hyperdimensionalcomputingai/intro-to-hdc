@@ -4,18 +4,17 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Sequence
 
 import numpy as np
-from ollama import Client, ResponseError
 import torch
 import torch.nn.functional as F
 import torchhd
+from ollama import Client, ResponseError
 
 from hdc.core import DIMENSIONS, SEED
-
 
 DOCUMENT_TEMPLATE_VERSION = 1
 PROJECTION_TYPE = "rademacher-sign-v1"
@@ -79,17 +78,13 @@ class OllamaEmbedder:
                 truncate=False,
             )
         except ResponseError as error:
-            raise OllamaEmbeddingError(
-                f"Ollama embedding request failed: {error.error}"
-            ) from error
+            raise OllamaEmbeddingError(f"Ollama embedding request failed: {error.error}") from error
         except ConnectionError as error:
             raise self._connection_error() from error
 
         values = result.embeddings
         if len(values) != len(texts):
-            raise OllamaEmbeddingError(
-                "Ollama returned an unexpected number of embedding vectors"
-            )
+            raise OllamaEmbeddingError("Ollama returned an unexpected number of embedding vectors")
 
         embeddings = torch.tensor(values, dtype=torch.float32)
         if embeddings.ndim != 2 or embeddings.shape[1] == 0:
@@ -193,8 +188,7 @@ class RandomHyperplaneProjector:
             actual_sha256 = file_sha256(path)
             if actual_sha256 != expected_sha256:
                 raise ValueError(
-                    f"Projection artifact checksum mismatch: {actual_sha256} "
-                    f"!= {expected_sha256}"
+                    f"Projection artifact checksum mismatch: {actual_sha256} != {expected_sha256}"
                 )
         values = np.load(path, allow_pickle=False)
         return cls(torch.from_numpy(values), seed=seed)
@@ -239,22 +233,15 @@ class SemanticHDCMetadata:
             raise ValueError(
                 "Embedding model digest changed; rebuild the HDC vectors before querying"
             )
-        if (
-            embedding_dimensions is not None
-            and embedding_dimensions != self.embedding_dimensions
-        ):
+        if embedding_dimensions is not None and embedding_dimensions != self.embedding_dimensions:
             raise ValueError(
                 "Embedding dimension changed: "
                 f"{embedding_dimensions} != {self.embedding_dimensions}"
             )
         if self.projection_type != PROJECTION_TYPE:
-            raise ValueError(
-                f"Unsupported projection type: {self.projection_type!r}"
-            )
+            raise ValueError(f"Unsupported projection type: {self.projection_type!r}")
         if self.document_template_version != DOCUMENT_TEMPLATE_VERSION:
-            raise ValueError(
-                "Semantic document template changed; rebuild the HDC vectors"
-            )
+            raise ValueError("Semantic document template changed; rebuild the HDC vectors")
 
 
 def file_sha256(path: Path) -> str:

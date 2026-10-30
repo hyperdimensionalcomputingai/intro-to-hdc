@@ -1,4 +1,4 @@
-# Multimodal Knowledge Graphs with HDC + lance-graph
+# Multimodal Knowledge Graphs with HDC + lance-csr
 
 A small, self-contained demo that combines two ways of looking at the same data: hyperdimensional space (10K dimensions) and property graphs. [LanceDB](https://lancedb.com) is used as the storage, providing two forms of retrieval over the data:
 
@@ -6,7 +6,7 @@ A small, self-contained demo that combines two ways of looking at the same data:
   supplies semantic similarity, then a random projection carries that geometry into 10,000
   dimensions. This answers paraphrased questions such as *"mountainous cities near the pacific
   ocean"* without an exact-term vocabulary.
-- **Property-graph traversal** via **[lance-graph](https://github.com/lancedb/lance-graph)**:
+- **Property-graph traversal** via **[lance-csr](https://github.com/hyperdimensionalcomputingai/lance-csr)**:
   exact, schema-valid Cypher over the same tables.
 
 Both views live in **one [Lance](https://lance.org)** dataset. Lance is a multimodal lakehouse format that's well suited for HDC.
@@ -161,7 +161,7 @@ picture never pays to read one, which is what makes storing large assets inline 
 At query time ([src/hdc/retrieve.py](src/hdc/retrieve.py)), the raw natural-language query goes through the same embedding
 model and projection as the stored location documents. The resulting query hypervector ranks
 `Location.hv` by cosine similarity. There is no supported-phrase list, query-to-feature
-mapper, token lookup, or `vocabulary.json`. `lance-graph` ([src/graph/retrieve.py](src/graph/retrieve.py)) then traverses from
+mapper, token lookup, or `vocabulary.json`. `lance-csr` ([src/graph/retrieve.py](src/graph/retrieve.py)) then traverses from
 each candidate location to the people connected by real `VISITED` edges (the validation step).
 
 ### From a text embedding to HDC space
@@ -286,7 +286,7 @@ ollama ls
 uv sync
 ```
 
-Direct dependencies include the official `ollama` Python client, `lancedb`, `lance-graph`,
+Direct dependencies include the official `ollama` Python client, `lancedb`, `lance-csr`,
 `polars`, `pyarrow`, `numpy`, `torch`, `torch-hd`, plus `fastapi` / `uvicorn` for the visualizer
 backend. The client talks to the local Ollama server, so the demo adds no hosted embedding service
 or API key.
@@ -327,13 +327,13 @@ By default it asks *"mountainous cities near the pacific ocean"*. Neither `mount
 ```text
 Question: mountainous cities near the pacific ocean
 
-LanceDB HDC matches, expanded through lance-graph:
+LanceDB HDC matches, expanded through lance-csr:
   - Maya Chen -> Seattle (pacific, score=0.507, features=mountains, pacific_coast, scenic_urban)
   - Robby Jo -> Seattle (pacific, score=0.507, features=mountains, pacific_coast, scenic_urban)
   - Elena Park -> Salt Lake City (mountain, score=0.434, features=mountains, nature_access, mountain_west)
   - Andre Brooks -> New York (eastern, score=0.384, features=dense_skyline, urban_energy, concrete_jungle)
 
-All lance-graph validation paths:
+All lance-csr validation paths:
   - Andre Brooks -> New York (eastern)
   - Elena Park -> Salt Lake City (mountain)
   - Maya Chen -> Seattle (pacific)
@@ -369,7 +369,7 @@ Added HDC columns to shared LanceDB dataset: .../person-location
 Wrote semantic HDC metadata and projection: .../person-location/semantic_hdc.json
 ```
 
-**2. Exact graph queries (lance-graph / Cypher).** These match on real schema columns only:
+**2. Exact graph queries (lance-csr / Cypher).** These match on real schema columns only:
 
 ```bash
 uv run python src/graph_retrieve.py --city Seattle
@@ -525,7 +525,7 @@ A two-view React + FastAPI visualizer lives in [viz/](viz/):
   graph; the generated Cypher is shown read-only. Click a `Location` node and its skyline image is
   fetched on demand from the lazy blob column (nothing else loads image bytes).
 
-The Cypher engine (`lance_graph.CypherEngine`) is Python-only, so the browser never touches it: a
+The Cypher engine (`lance_csr.CypherEngine`) is Python-only, so the browser never touches it: a
 FastAPI backend serves JSON and the React frontend draws it.
 
 Run the two processes (build the dataset first if you haven't):
@@ -570,3 +570,9 @@ See [viz/README.md](viz/README.md) for the API contract.
 
 Compression / quantization (binary/bipolar packing, dimensionality choices, learned compression) and ANN indexing of the `hv` columns are real levers a production system would need, which [LanceDB](https://lancedb.com) is well-suited for.
 See [COMPRESSION_TRICKS.md](COMPRESSION_TRICKS.md) for concrete options, tradeoffs, and measured binary-HDC results from this demo.
+
+Dependency compatibility: `lance-csr` 0.4 requires `pylance` 13, whose namespace
+dependency currently limits this project to LanceDB 0.40. Other Python dependencies
+are updated to their latest stable releases as of 30 October 2026. The graph keeps
+its string identifiers and uses lance-csr’s join-based traversal; CSR indexing
+requires integer endpoints.

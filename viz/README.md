@@ -1,6 +1,6 @@
-# lance-graph visualizer
+# lance-csr visualizer
 
-A two-view graph visualizer over the lance-graph dataset:
+A two-view graph visualizer over the lance-csr dataset:
 
 - **Schema view** — the meta-graph (labels, properties, relationships), derived from
   `GraphConfig` + each table's Arrow schema. No query runs. Hypervector columns (`hv`)
@@ -10,7 +10,7 @@ A two-view graph visualizer over the lance-graph dataset:
   selections, dedups nodes, and returns a node-link graph. The generated Cypher is shown
   read-only.
 
-The Cypher engine (`lance_graph.CypherEngine`) is Python-only, so the browser never
+The Cypher engine (`lance_csr.CypherEngine`) is Python-only, so the browser never
 touches it: a FastAPI backend serves JSON and the React frontend only draws it.
 
 ## Run

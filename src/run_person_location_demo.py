@@ -52,7 +52,7 @@ def run_fuzzy_demo(
     print(f"Shared LanceDB dataset: {db_uri}")
     print(f"Question: {query}")
     print()
-    print("LanceDB HDC matches, expanded through lance-graph:")
+    print("LanceDB HDC matches, expanded through lance-csr:")
     for row in hdc_paths:
         feature_list = ", ".join(row["features"])
         print(
@@ -60,7 +60,7 @@ def run_fuzzy_demo(
             f"({row['timezone']}, score={row['score']:.3f}, features={feature_list})"
         )
     print()
-    print("All lance-graph validation paths:")
+    print("All lance-csr validation paths:")
     for row in graph_rows:
         print(f"  - {row['person']} -> {row['city']} ({row['timezone']})")
 
@@ -75,10 +75,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--query",
         default="mountainous cities near the pacific ocean",
-        help=(
-            "Fuzzy location description, e.g. "
-            "'mountainous cities near the pacific ocean'."
-        ),
+        help=("Fuzzy location description, e.g. 'mountainous cities near the pacific ocean'."),
     )
     parser.add_argument("--min-score", type=float, default=None)
     parser.add_argument("--limit", type=int, default=5)

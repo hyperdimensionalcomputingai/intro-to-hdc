@@ -15,7 +15,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <h1>lance-graph visualizer</h1>
+        <h1>lance-csr visualizer</h1>
         <nav className="tabs">
           <button className={tab === "schema" ? "active" : ""} onClick={() => setTab("schema")}>
             Schema

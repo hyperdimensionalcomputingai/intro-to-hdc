@@ -22,9 +22,8 @@ def parse_args() -> argparse.Namespace:
 
 if __name__ == "__main__":
     args = parse_args()
-    query = (
-        args.query
-        or (timezone_query(args.timezone) if args.timezone else city_query(args.city))
+    query = args.query or (
+        timezone_query(args.timezone) if args.timezone else city_query(args.city)
     )
     rows = execute_query(query, args.db_uri).to_pylist()
     if not rows:

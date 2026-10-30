@@ -105,9 +105,7 @@ def test_semantic_vector_must_be_bipolar(
     with pytest.raises(ValueError, match="bipolar"):
         LocationNodeEncoder(base_encoder).encode_node(
             properties,
-            torch.zeros(1024, dtype=torch.float32).as_subclass(
-                torchhd.MAPTensor
-            ),
+            torch.zeros(1024, dtype=torch.float32).as_subclass(torchhd.MAPTensor),
         )
 
 

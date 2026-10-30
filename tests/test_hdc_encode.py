@@ -108,8 +108,7 @@ def test_location_documents_use_human_readable_features_and_evidence() -> None:
     )
 
     assert documents["location-seattle"] == (
-        "mountains: mountain range is visible; "
-        "pacific coast: city is on Puget Sound"
+        "mountains: mountain range is visible; pacific coast: city is on Puget Sound"
     )
 
 

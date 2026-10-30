@@ -33,9 +33,7 @@ def print_results(title: str, results: list[EvaluationResult]) -> None:
     print(title)
     for result in results:
         status = "PASS" if result.passes else "FAIL"
-        ranking = ", ".join(
-            f"{city}={score:.3f}" for city, score in result.ranked_cities
-        )
+        ranking = ", ".join(f"{city}={score:.3f}" for city, score in result.ranked_cities)
         print(
             f"{status} expected={result.expected_city!r} "
             f"rank={result.expected_rank} "
@@ -43,9 +41,7 @@ def print_results(title: str, results: list[EvaluationResult]) -> None:
         )
         print(f"  {ranking}")
         if result.expected_people:
-            visitors = " | ".join(
-                result.people_by_city.get(result.expected_city, ())
-            )
+            visitors = " | ".join(result.people_by_city.get(result.expected_city, ()))
             print(f"  visitors={visitors}")
 
 
@@ -70,9 +66,7 @@ def main() -> int:
 
     top_one = sum(result.expected_rank == 1 for result in semantic_results)
     path_passes = sum(result.passes for result in path_results)
-    mrr = sum(
-        result.reciprocal_rank for result in semantic_results
-    ) / len(semantic_results)
+    mrr = sum(result.reciprocal_rank for result in semantic_results) / len(semantic_results)
     print()
     print(
         f"Semantic top-1 accuracy: {top_one}/{len(semantic_results)} "
@@ -83,9 +77,7 @@ def main() -> int:
         f"VISITED path checks: {path_passes}/{len(path_results)} "
         f"({path_passes / len(path_results):.1%})"
     )
-    return 0 if all(
-        result.passes for result in [*semantic_results, *path_results]
-    ) else 1
+    return 0 if all(result.passes for result in [*semantic_results, *path_results]) else 1
 
 
 if __name__ == "__main__":

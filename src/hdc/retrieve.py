@@ -26,9 +26,7 @@ def load_semantic_runtime(
     ollama_host: str,
 ) -> tuple[OllamaEmbedder, RandomHyperplaneProjector, SemanticHDCMetadata]:
     """Load and validate the exact semantic coordinate system used at encode time."""
-    metadata = SemanticHDCMetadata.read(
-        db_uri / SEMANTIC_HDC_METADATA_FILENAME
-    )
+    metadata = SemanticHDCMetadata.read(db_uri / SEMANTIC_HDC_METADATA_FILENAME)
     embedder = OllamaEmbedder(model=metadata.model, host=ollama_host)
     metadata.validate_runtime(
         model=embedder.canonical_model,
@@ -95,9 +93,7 @@ def hdc_fuzzy_paths(
         score = 1.0 - float(location["_distance"])
         if min_score is not None and score < min_score:
             continue
-        top_features = [
-            row["feature"] for row in features.get(location["id"], [])[:3]
-        ]
+        top_features = [row["feature"] for row in features.get(location["id"], [])[:3]]
         for path in engine.execute(city_query(location["name"])).to_pylist():
             matches.append(
                 {

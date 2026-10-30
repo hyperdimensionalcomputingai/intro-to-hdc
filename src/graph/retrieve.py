@@ -1,18 +1,18 @@
-"""Configure lance-graph and execute exact Cypher traversals over stored tables."""
+"""Configure lance-csr and execute exact Cypher traversals over stored tables."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 import lance
-from lance_graph import CypherEngine, GraphConfig
+from lance_csr import CypherEngine, GraphConfig
 
 from graph.paths import DEFAULT_DB_URI
 
 # Single source of truth for the graph's shape. The CypherEngine's GraphConfig is
 # built from this, and the visualizer API (graph_api.py) reads it directly — so the
 # schema view, query builder, and engine never drift. Swap this spec to point the
-# whole stack at a different lance-graph dataset.
+# whole stack at a different lance-csr dataset.
 GRAPH_SCHEMA = {
     "nodes": [
         {"label": "Person", "id": "id"},
@@ -41,13 +41,14 @@ def build_engine(db_uri: Path = DEFAULT_DB_URI) -> CypherEngine:
     """Create a reusable CypherEngine with schema/catalog metadata cached."""
     builder = GraphConfig.builder()
     for node in GRAPH_SCHEMA["nodes"]:
-        builder = builder.with_node_label(node["label"], node["id"])
+        builder = builder.node_table(node["label"], node["id"])
     for rel in GRAPH_SCHEMA["relationships"]:
-        builder = builder.with_relationship(rel["type"], rel["from_key"], rel["to_key"])
+        builder = builder.rel_table(
+            rel["type"], rel["from_label"], rel["to_label"], rel["from_key"], rel["to_key"]
+        )
     config = builder.build()
-    datasets = {
-        name: lance.dataset(str(db_uri / f"{name}.lance")) for name in table_names()
-    }
+    datasets = {name: lance.dataset(str(db_uri / f"{name}.lance")) for name in table_names()}
+    # String IDs use join-based traversal; CSR indexing requires integer endpoints.
     return CypherEngine(config, datasets)
 
 
